@@ -10,6 +10,42 @@ export const dynamic = "force-dynamic";
 
 const OPTION_KEYS: OptionKey[] = ["A", "B", "C", "D"];
 
+function ScoreRing({ score, total }: { score: number; total: number }) {
+  const pct = total > 0 ? score / total : 0;
+  const r = 54;
+  const c = 2 * Math.PI * r;
+  return (
+    <div className="relative h-40 w-40 mx-auto">
+      <svg viewBox="0 0 128 128" className="h-full w-full -rotate-90">
+        <circle cx="64" cy="64" r={r} fill="none" stroke="#EEF1F8" strokeWidth="11" />
+        <circle
+          cx="64"
+          cy="64"
+          r={r}
+          fill="none"
+          stroke="url(#ring)"
+          strokeWidth="11"
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={c * (1 - pct)}
+        />
+        <defs>
+          <linearGradient id="ring" x1="0" y1="0" x2="128" y2="128">
+            <stop stopColor="#6366F1" />
+            <stop offset="1" stopColor="#7C3AED" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="font-display text-4xl font-extrabold text-ink leading-none">
+          {score}
+        </span>
+        <span className="text-sm text-muted mt-1">of {total}</span>
+      </div>
+    </div>
+  );
+}
+
 export default async function ResultsPage({
   params,
 }: {
@@ -54,55 +90,65 @@ export default async function ResultsPage({
   return (
     <>
       <Header name={viewer?.full_name ?? user.email} isAdmin={admin} />
-      <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-8">
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 text-center mb-6">
-          <h1 className="text-lg font-bold text-slate-900">{exam.title}</h1>
+      <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-10">
+        <div className="card p-8 text-center mb-8 fade-up">
+          <p className="pill bg-indigo-50 text-primary mb-2">{exam.title}</p>
           {admin && (
-            <p className="text-sm text-slate-500">
-              {student?.full_name} ({student?.email})
+            <p className="text-sm text-muted mb-4">
+              {student?.full_name} · {student?.email}
             </p>
           )}
-          <p className="text-5xl font-bold text-indigo-600 my-4">
-            {attempt.score}
-            <span className="text-slate-400 text-3xl">/{attempt.total}</span>
-          </p>
-          <div className="text-sm text-slate-500 space-x-3">
+          <div className="my-6">
+            <ScoreRing score={attempt.score ?? 0} total={attempt.total ?? 0} />
+          </div>
+          <div className="flex items-center justify-center gap-2 text-sm">
             {attempt.violations > 0 && (
-              <span className="text-amber-600">⚠ {attempt.violations} violation{attempt.violations > 1 ? "s" : ""}</span>
+              <span className="pill bg-amber-50 text-amber-700">
+                ⚠ {attempt.violations} violation{attempt.violations > 1 ? "s" : ""}
+              </span>
             )}
-            {attempt.auto_submitted && <span className="text-red-500">Auto-submitted</span>}
+            {attempt.auto_submitted && (
+              <span className="pill bg-red-50 text-danger">Auto-submitted</span>
+            )}
           </div>
         </div>
 
         {!canReview ? (
-          <p className="text-center text-sm text-slate-500 bg-white border border-slate-200 rounded-xl p-6">
-            The detailed answer review will appear here once your teacher ends the exam.
-          </p>
+          <div className="card p-8 text-center fade-up">
+            <div className="mx-auto h-12 w-12 rounded-xl bg-slate-50 border border-line flex items-center justify-center text-xl mb-3">
+              🔒
+            </div>
+            <p className="font-semibold text-ink">Answer review is locked</p>
+            <p className="text-sm text-muted mt-1">
+              It unlocks for everyone once your teacher ends the exam.
+            </p>
+          </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {questions.map((q, i) => {
               const qid = q._id.toString();
               const chosen = answers[qid];
               const isCorrect = chosen === q.correct;
               return (
-                <div key={qid} className="bg-white border border-slate-200 rounded-xl p-5">
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <p className="font-medium text-slate-900 whitespace-pre-wrap">
-                      {i + 1}. {q.question}
+                <div key={qid} className="card p-6 fade-up">
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <p className="font-semibold text-ink leading-relaxed whitespace-pre-wrap">
+                      <span className="text-muted mr-1.5">{i + 1}.</span>
+                      {q.question}
                     </p>
                     <span
-                      className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-full ${
+                      className={`pill shrink-0 ${
                         !chosen
-                          ? "bg-slate-100 text-slate-500"
+                          ? "bg-slate-100 text-muted"
                           : isCorrect
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-red-100 text-red-700"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-red-50 text-danger"
                       }`}
                     >
-                      {!chosen ? "Not answered" : isCorrect ? "Correct" : "Wrong"}
+                      {!chosen ? "Skipped" : isCorrect ? "✓ Correct" : "✗ Wrong"}
                     </span>
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     {OPTION_KEYS.map((key) => {
                       const text = q[`option_${key.toLowerCase()}`] as string;
                       const isAnswer = q.correct === key;
@@ -110,19 +156,34 @@ export default async function ResultsPage({
                       return (
                         <div
                           key={key}
-                          className={`rounded-lg border px-3 py-2 text-sm flex items-center gap-2 ${
+                          className={`rounded-xl border px-4 py-2.5 text-sm flex items-center gap-3 ${
                             isAnswer
-                              ? "border-emerald-400 bg-emerald-50"
+                              ? "border-emerald-300 bg-emerald-50/70"
                               : isChosen
-                                ? "border-red-300 bg-red-50"
-                                : "border-slate-100"
+                                ? "border-red-200 bg-red-50/70"
+                                : "border-line"
                           }`}
                         >
-                          <span className="font-semibold text-slate-600 w-4">{key}.</span>
-                          <span className="text-slate-800 flex-1">{text}</span>
-                          {isAnswer && <span className="text-xs font-semibold text-emerald-600">Correct answer</span>}
-                          {isChosen && !isAnswer && <span className="text-xs font-semibold text-red-500">Your answer</span>}
-                          {isChosen && isAnswer && <span className="text-xs font-semibold text-emerald-600">✓ Your answer</span>}
+                          <span
+                            className={`shrink-0 w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center ${
+                              isAnswer
+                                ? "bg-emerald-600 text-white"
+                                : isChosen
+                                  ? "bg-red-500 text-white"
+                                  : "bg-slate-100 text-muted"
+                            }`}
+                          >
+                            {key}
+                          </span>
+                          <span className="text-ink flex-1">{text}</span>
+                          {isAnswer && (
+                            <span className="text-xs font-semibold text-emerald-700">
+                              {isChosen ? "✓ Your answer" : "Correct answer"}
+                            </span>
+                          )}
+                          {isChosen && !isAnswer && (
+                            <span className="text-xs font-semibold text-danger">Your answer</span>
+                          )}
                         </div>
                       );
                     })}
@@ -133,10 +194,10 @@ export default async function ResultsPage({
           </div>
         )}
 
-        <div className="text-center mt-8">
+        <div className="text-center mt-10">
           <Link
             href={admin ? `/admin/exam/${exam._id.toString()}` : "/dashboard"}
-            className="text-sm text-indigo-600 hover:underline"
+            className="btn btn-outline"
           >
             ← Back
           </Link>

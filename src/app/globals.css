@@ -1,21 +1,204 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #f4f6fb;
+  --surface: #ffffff;
+  --ink: #0b1220;
+  --muted: #5f6b7e;
+  --line: #e6eaf3;
+  --primary: #4f46e5;
+  --primary-deep: #4338ca;
+  --violet: #7c3aed;
+  --accent: #f59e0b;
+  --success: #059669;
+  --danger: #dc2626;
 }
 
 @theme inline {
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-primary: var(--primary);
+  --color-primary-deep: var(--primary-deep);
+  --color-violet: var(--violet);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
   --font-sans: var(--font-geist-sans);
+  --font-display: var(--font-sora);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
-  color: var(--foreground);
+  color: var(--ink);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(79, 70, 229, 0.18);
+}
+
+/* Shared primitives. Size variants (btn-lg, btn-sm, field-otp) are defined
+   after their base class so they win the cascade; use them instead of
+   padding or font utilities on these elements. */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 1.25rem;
+  box-shadow:
+    0 1px 2px rgba(11, 18, 32, 0.04),
+    0 12px 32px -16px rgba(11, 18, 32, 0.1);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: 0.875rem;
+  padding: 0.625rem 1.25rem;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 100ms ease;
+  cursor: pointer;
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.btn-lg {
+  padding: 0.8rem 1.5rem;
+  font-size: 0.9375rem;
+  border-radius: 1rem;
+}
+
+.btn-sm {
+  padding: 0.45rem 0.875rem;
+  font-size: 0.75rem;
+  border-radius: 0.65rem;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--violet));
+  color: #fff;
+  box-shadow: 0 8px 20px -8px rgba(79, 70, 229, 0.55);
+}
+.btn-primary:hover {
+  box-shadow: 0 10px 26px -8px rgba(79, 70, 229, 0.7);
+}
+
+.btn-outline {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+.btn-outline:hover {
+  border-color: #c9d2e4;
+  background: #f8fafd;
+}
+
+.btn-success {
+  background: var(--success);
+  color: #fff;
+  box-shadow: 0 8px 20px -8px rgba(5, 150, 105, 0.5);
+}
+.btn-success:hover {
+  background: #047857;
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+.btn-danger:hover {
+  background: #b91c1c;
+}
+
+.field {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 0.875rem;
+  background: var(--surface);
+  padding: 0.65rem 0.9rem;
+  font-size: 0.9375rem;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+.field::placeholder {
+  color: #9aa5b8;
+}
+.field:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.14);
+}
+
+.field-otp {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 1.75rem;
+  letter-spacing: 0.45em;
+  text-align: center;
+  padding-block: 0.875rem;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+}
+
+/* backdrop for auth screens */
+.aurora {
+  background:
+    radial-gradient(60rem 30rem at 15% -10%, rgba(99, 102, 241, 0.14), transparent 60%),
+    radial-gradient(50rem 28rem at 110% 10%, rgba(124, 58, 237, 0.12), transparent 55%),
+    radial-gradient(40rem 24rem at 50% 120%, rgba(245, 158, 11, 0.08), transparent 60%),
+    var(--background);
+}
+
+.dotgrid {
+  background-image: radial-gradient(rgba(11, 18, 32, 0.07) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 30%, transparent 75%);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fade-up {
+  animation: fade-up 450ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* During an exam we block text selection to discourage copying questions */

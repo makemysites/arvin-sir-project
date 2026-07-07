@@ -47,7 +47,7 @@ export default function DownloadCsvButton({
     <button
       onClick={download}
       disabled={rows.length === 0}
-      className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50 disabled:opacity-40"
+      className="btn btn-sm btn-outline"
     >
       ⬇ Download CSV
     </button>

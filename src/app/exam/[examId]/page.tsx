@@ -19,6 +19,29 @@ interface StartPayload {
 
 const OPTION_KEYS: OptionKey[] = ["A", "B", "C", "D"];
 
+const RULES = [
+  {
+    icon: "🖥️",
+    title: "Stay in fullscreen",
+    text: "The exam runs in fullscreen. Leaving it counts as a violation.",
+  },
+  {
+    icon: "🚫",
+    title: "No tab switching",
+    text: `Switching tabs or apps triggers a warning. After ${MAX_VIOLATIONS} warnings, your exam is submitted automatically.`,
+  },
+  {
+    icon: "⏱️",
+    title: "The clock never pauses",
+    text: "The timer keeps running even if you close the page.",
+  },
+  {
+    icon: "💾",
+    title: "Everything auto-saves",
+    text: "Answers save instantly. If the page reloads, you resume right where you left off.",
+  },
+];
+
 export default function ExamPage({
   params,
 }: {
@@ -206,27 +229,40 @@ export default function ExamPage({
 
   if (phase === "rules" || phase === "loading") {
     return (
-      <main className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-lg bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <h1 className="text-xl font-bold text-slate-900 mb-3">Before you start</h1>
-          <ul className="space-y-2 text-sm text-slate-700 list-disc pl-5 mb-5">
-            <li>The exam runs in <strong>fullscreen</strong>. Do not exit it.</li>
-            <li>
-              <strong>Do not switch tabs or apps.</strong> After {MAX_VIOLATIONS} warnings your
-              exam is submitted automatically.
-            </li>
-            <li>The timer keeps running even if you close the page — it cannot be paused.</li>
-            <li>Answers are saved instantly as you select them.</li>
-            <li>If your page reloads, just come back — you resume with your saved answers.</li>
-          </ul>
-          {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
-          <button
-            onClick={start}
-            disabled={phase === "loading"}
-            className="w-full rounded-lg bg-indigo-600 text-white font-medium py-2.5 hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {phase === "loading" ? "Starting…" : "I understand — start the exam"}
-          </button>
+      <main className="aurora relative flex-1 flex items-center justify-center p-4 overflow-hidden">
+        <div className="dotgrid absolute inset-0" aria-hidden />
+        <div className="relative w-full max-w-xl fade-up">
+          <div className="card p-8">
+            <p className="pill bg-indigo-50 text-primary mb-3">Exam rules</p>
+            <h1 className="font-display text-2xl font-bold tracking-tight text-ink mb-6">
+              Before you start
+            </h1>
+            <ul className="space-y-4 mb-8">
+              {RULES.map((rule) => (
+                <li key={rule.title} className="flex gap-4">
+                  <span className="h-10 w-10 shrink-0 rounded-xl bg-slate-50 border border-line flex items-center justify-center text-lg">
+                    {rule.icon}
+                  </span>
+                  <div>
+                    <p className="font-semibold text-ink text-sm">{rule.title}</p>
+                    <p className="text-sm text-muted mt-0.5 leading-relaxed">{rule.text}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {error && (
+              <p className="flex items-start gap-2 text-sm text-danger bg-red-50 border border-red-100 rounded-xl p-3.5 mb-5">
+                <span aria-hidden>⚠</span> {error}
+              </p>
+            )}
+            <button
+              onClick={start}
+              disabled={phase === "loading"}
+              className="btn btn-lg btn-primary w-full"
+            >
+              {phase === "loading" ? "Starting…" : "I understand — start the exam"}
+            </button>
+          </div>
         </div>
       </main>
     );
@@ -234,23 +270,28 @@ export default function ExamPage({
 
   if (phase === "done") {
     return (
-      <main className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Exam submitted</h1>
+      <main className="aurora relative flex-1 flex items-center justify-center p-4 overflow-hidden">
+        <div className="dotgrid absolute inset-0" aria-hidden />
+        <div className="relative card w-full max-w-md p-10 text-center fade-up">
+          <div className="mx-auto h-16 w-16 rounded-2xl bg-emerald-50 flex items-center justify-center text-3xl mb-5">
+            ✅
+          </div>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-ink mb-1">
+            Exam submitted
+          </h1>
           {result ? (
-            <p className="text-4xl font-bold text-indigo-600 my-4">
-              {result.score}<span className="text-slate-400 text-2xl">/{result.total}</span>
+            <p className="font-display text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-indigo-600 to-violet-600 my-5">
+              {result.score}
+              <span className="text-3xl text-slate-300">/{result.total}</span>
             </p>
           ) : (
-            <p className="text-slate-500 my-4">Your answers were recorded.</p>
+            <p className="text-muted my-5">Your answers were recorded.</p>
           )}
-          <p className="text-sm text-slate-500 mb-6">
-            You can review each question with the correct answers once your teacher ends the exam.
+          <p className="text-sm text-muted leading-relaxed mb-7">
+            You can review each question with the correct answers once your teacher ends the
+            exam.
           </p>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="rounded-lg bg-indigo-600 text-white font-medium py-2.5 px-6 hover:bg-indigo-700"
-          >
+          <button onClick={() => router.push("/dashboard")} className="btn btn-lg btn-primary px-8">
             Back to dashboard
           </button>
         </div>
@@ -261,15 +302,19 @@ export default function ExamPage({
   if (!data) return null;
   const q = data.questions[current];
   const answeredCount = Object.keys(answers).length;
+  const progress = Math.round((answeredCount / data.questions.length) * 100);
 
   return (
-    <main className="flex-1 flex flex-col max-w-5xl w-full mx-auto px-4 py-4">
+    <main className="flex-1 flex flex-col max-w-5xl w-full mx-auto px-4 py-5">
       {/* Warning modal */}
       {warning && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center">
-            <p className="text-3xl mb-2">⚠️</p>
-            <p className="text-slate-800 font-medium mb-4">{warning}</p>
+        <div className="fixed inset-0 z-50 bg-ink/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="card max-w-sm w-full p-7 text-center fade-up">
+            <div className="mx-auto h-14 w-14 rounded-2xl bg-amber-50 flex items-center justify-center text-2xl mb-4">
+              ⚠️
+            </div>
+            <p className="font-display font-bold text-ink mb-2">Hold on!</p>
+            <p className="text-sm text-muted leading-relaxed mb-6">{warning}</p>
             <button
               onClick={() => {
                 setWarning(null);
@@ -277,7 +322,7 @@ export default function ExamPage({
                   document.documentElement.requestFullscreen().catch(() => {});
                 }
               }}
-              className="rounded-lg bg-indigo-600 text-white font-medium py-2 px-6 hover:bg-indigo-700"
+              className="btn btn-lg btn-primary w-full"
             >
               Return to exam
             </button>
@@ -286,33 +331,49 @@ export default function ExamPage({
       )}
 
       {/* Top bar */}
-      <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-4 py-3 mb-4">
-        <div>
-          <h1 className="font-bold text-slate-900 text-sm sm:text-base">{data.examTitle}</h1>
-          <p className="text-xs text-slate-500">
-            {answeredCount}/{data.questions.length} answered
-            {violations > 0 && (
-              <span className="text-amber-600 ml-2">· {violations} warning{violations > 1 ? "s" : ""}</span>
-            )}
-          </p>
+      <div className="card px-5 py-4 mb-5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="font-display font-bold text-ink text-sm sm:text-base truncate">
+              {data.examTitle}
+            </h1>
+            <p className="text-xs text-muted mt-0.5">
+              {answeredCount} of {data.questions.length} answered
+              {violations > 0 && (
+                <span className="text-amber-600 font-medium ml-2">
+                  ⚠ {violations} warning{violations > 1 ? "s" : ""}
+                </span>
+              )}
+            </p>
+          </div>
+          <div
+            className={`shrink-0 font-mono tabular-nums text-xl font-bold px-4 py-2 rounded-xl border ${
+              secondsLeft <= 60
+                ? "bg-red-50 text-danger border-red-100 animate-pulse"
+                : "bg-slate-50 text-ink border-line"
+            }`}
+          >
+            {fmt(secondsLeft)}
+          </div>
         </div>
-        <div
-          className={`font-mono text-xl font-bold px-3 py-1 rounded-lg ${
-            secondsLeft <= 60 ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-800"
-          }`}
-        >
-          {fmt(secondsLeft)}
+        <div className="mt-3 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4 flex-1">
+      <div className="flex flex-col lg:flex-row gap-5 flex-1">
         {/* Question card */}
-        <div className="flex-1 bg-white border border-slate-200 rounded-xl p-5 flex flex-col">
-          <p className="text-xs font-semibold text-slate-400 uppercase mb-2">
-            Question {current + 1} of {data.questions.length}
+        <div className="flex-1 card p-6 sm:p-8 flex flex-col">
+          <p className="pill bg-indigo-50 text-primary w-fit mb-4">
+            Question {current + 1} / {data.questions.length}
           </p>
-          <p className="text-slate-900 font-medium mb-5 whitespace-pre-wrap">{q.question}</p>
-          <div className="space-y-2.5">
+          <p className="font-display text-lg sm:text-xl font-semibold text-ink leading-relaxed mb-7 whitespace-pre-wrap">
+            {q.question}
+          </p>
+          <div className="space-y-3">
             {OPTION_KEYS.map((key) => {
               const text = q[`option_${key.toLowerCase()}` as keyof StudentQuestion] as string;
               const selected = answers[q.id] === key;
@@ -320,81 +381,108 @@ export default function ExamPage({
                 <button
                   key={key}
                   onClick={() => selectAnswer(q.id, key)}
-                  className={`w-full text-left rounded-lg border px-4 py-3 flex items-start gap-3 transition-colors ${
+                  className={`group w-full text-left rounded-2xl border-2 px-4 py-3.5 flex items-center gap-3.5 transition-all ${
                     selected
-                      ? "border-indigo-600 bg-indigo-50"
-                      : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                      ? "border-primary bg-indigo-50/70 shadow-[0_4px_16px_-6px_rgba(79,70,229,0.35)]"
+                      : "border-line bg-surface hover:border-slate-300 hover:bg-slate-50"
                   }`}
                 >
                   <span
-                    className={`shrink-0 w-6 h-6 rounded-full text-sm font-semibold flex items-center justify-center ${
-                      selected ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600"
+                    className={`shrink-0 w-8 h-8 rounded-xl text-sm font-bold flex items-center justify-center transition-colors ${
+                      selected
+                        ? "bg-primary text-white"
+                        : "bg-slate-100 text-muted group-hover:bg-slate-200"
                     }`}
                   >
                     {key}
                   </span>
-                  <span className="text-slate-800">{text}</span>
+                  <span className={`text-[15px] ${selected ? "font-medium text-ink" : "text-ink"}`}>
+                    {text}
+                  </span>
+                  {selected && (
+                    <span className="ml-auto text-primary" aria-hidden>
+                      ✓
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
-          <div className="flex justify-between mt-auto pt-6">
+          <div className="flex justify-between mt-auto pt-8">
             <button
               onClick={() => setCurrent((c) => Math.max(0, c - 1))}
               disabled={current === 0}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50 disabled:opacity-40"
+              className="btn btn-outline"
             >
               ← Previous
             </button>
             {current < data.questions.length - 1 ? (
               <button
                 onClick={() => setCurrent((c) => Math.min(data.questions.length - 1, c + 1))}
-                className="rounded-lg bg-slate-900 text-white px-4 py-2 text-sm hover:bg-slate-700"
+                className="btn bg-ink text-white hover:bg-slate-700"
               >
                 Next →
               </button>
             ) : (
               <button
                 onClick={() => {
-                  if (confirm(`Submit exam? You answered ${answeredCount} of ${data.questions.length} questions.`)) {
+                  if (
+                    confirm(
+                      `Submit exam? You answered ${answeredCount} of ${data.questions.length} questions.`
+                    )
+                  ) {
                     submit(false);
                   }
                 }}
-                className="rounded-lg bg-emerald-600 text-white px-4 py-2 text-sm font-medium hover:bg-emerald-700"
+                className="btn btn-success"
               >
-                Submit exam
+                Submit exam ✓
               </button>
             )}
           </div>
         </div>
 
         {/* Question palette */}
-        <div className="lg:w-56 bg-white border border-slate-200 rounded-xl p-4 h-fit">
-          <p className="text-xs font-semibold text-slate-400 uppercase mb-3">Questions</p>
-          <div className="grid grid-cols-8 lg:grid-cols-5 gap-1.5">
+        <div className="lg:w-60 card p-5 h-fit">
+          <p className="text-xs font-bold uppercase tracking-wider text-muted mb-3.5">
+            Questions
+          </p>
+          <div className="grid grid-cols-8 lg:grid-cols-5 gap-2">
             {data.questions.map((question, i) => (
               <button
                 key={question.id}
                 onClick={() => setCurrent(i)}
-                className={`h-8 rounded-md text-xs font-semibold ${
+                className={`h-9 rounded-lg text-xs font-bold transition-colors ${
                   i === current
-                    ? "bg-slate-900 text-white"
+                    ? "bg-ink text-white"
                     : answers[question.id]
-                      ? "bg-indigo-100 text-indigo-700"
-                      : "bg-slate-100 text-slate-500"
+                      ? "bg-indigo-100 text-primary-deep"
+                      : "bg-slate-100 text-muted hover:bg-slate-200"
                 }`}
               >
                 {i + 1}
               </button>
             ))}
           </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-4 text-[11px] text-muted">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded bg-indigo-100 border border-indigo-200" /> Answered
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded bg-slate-100 border border-line" /> Pending
+            </span>
+          </div>
           <button
             onClick={() => {
-              if (confirm(`Submit exam? You answered ${answeredCount} of ${data.questions.length} questions.`)) {
+              if (
+                confirm(
+                  `Submit exam? You answered ${answeredCount} of ${data.questions.length} questions.`
+                )
+              ) {
                 submit(false);
               }
             }}
-            className="w-full mt-4 rounded-lg bg-emerald-600 text-white py-2 text-sm font-medium hover:bg-emerald-700"
+            className="btn btn-success w-full mt-5"
           >
             Submit exam
           </button>

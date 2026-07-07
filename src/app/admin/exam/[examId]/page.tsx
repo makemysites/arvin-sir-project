@@ -11,10 +11,10 @@ import type { ExamStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_STYLES: Record<string, string> = {
-  draft: "bg-slate-100 text-slate-600",
-  live: "bg-emerald-100 text-emerald-700",
-  ended: "bg-slate-800 text-white",
+const STATUS_PILL: Record<string, string> = {
+  draft: "bg-slate-100 text-muted",
+  live: "bg-emerald-50 text-emerald-700",
+  ended: "bg-ink text-white",
 };
 
 export default async function AdminExamPage({
@@ -50,6 +50,12 @@ export default async function AdminExamPage({
 
   const submitted = attempts.filter((r) => r.status === "submitted");
   const inProgress = attempts.filter((r) => r.status === "in_progress");
+  const avg =
+    submitted.length > 0
+      ? (
+          submitted.reduce((acc, r) => acc + (r.score ?? 0), 0) / submitted.length
+        ).toFixed(1)
+      : "—";
 
   const csvRows = submitted.map((r) => {
     const s = studentById.get(r.student_id.toString());
@@ -64,52 +70,73 @@ export default async function AdminExamPage({
     };
   });
 
+  const stats = [
+    { label: "Questions", value: questionCount, icon: "❓" },
+    { label: "Duration", value: `${exam.duration_minutes}m`, icon: "⏱" },
+    { label: "Submitted", value: submitted.length, icon: "✅" },
+    exam.status === "live"
+      ? { label: "Writing now", value: inProgress.length, icon: "✍️" }
+      : { label: "Avg score", value: avg, icon: "📊" },
+  ];
+
   return (
     <>
       <Header name={admin.email} isAdmin />
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <Link href="/admin" className="text-sm text-indigo-600 hover:underline">
-              ← All exams
-            </Link>
-            <h1 className="text-2xl font-bold text-slate-900 mt-1">
-              {exam.title}
-              <span
-                className={`ml-3 align-middle text-xs font-semibold uppercase px-2.5 py-1 rounded-full ${STATUS_STYLES[exam.status]}`}
-              >
-                {exam.status}
-              </span>
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">
-              {exam.duration_minutes} minutes · {questionCount} questions
-            </p>
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-10 space-y-8">
+        <div className="fade-up">
+          <Link
+            href="/admin"
+            className="text-sm font-medium text-muted hover:text-ink transition-colors"
+          >
+            ← All exams
+          </Link>
+          <div className="flex items-start justify-between flex-wrap gap-4 mt-3">
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-ink">
+                  {exam.title}
+                </h1>
+                <span className={`pill ${STATUS_PILL[exam.status]}`}>{exam.status}</span>
+              </div>
+            </div>
+            <StatusControls
+              examId={examId}
+              status={exam.status as ExamStatus}
+              questionCount={questionCount}
+            />
           </div>
-          <StatusControls
-            examId={examId}
-            status={exam.status as ExamStatus}
-            questionCount={questionCount}
-          />
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 fade-up">
+          {stats.map((s) => (
+            <div key={s.label} className="card p-5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
+                <span aria-hidden>{s.icon}</span> {s.label}
+              </p>
+              <p className="font-display text-2xl font-bold text-ink mt-1.5">{s.value}</p>
+            </div>
+          ))}
         </div>
 
         {exam.status === "draft" && (
-          <QuestionUpload examId={examId} existingCount={questionCount} />
+          <div className="fade-up">
+            <QuestionUpload examId={examId} existingCount={questionCount} />
+          </div>
         )}
 
-        <section className="bg-white border border-slate-200 rounded-xl">
-          <div className="p-4 flex items-center justify-between flex-wrap gap-2 border-b border-slate-100">
-            <h2 className="font-semibold text-slate-900">
+        <section className="card overflow-hidden fade-up">
+          <div className="p-5 flex items-center justify-between flex-wrap gap-3 border-b border-line">
+            <h2 className="font-display font-bold text-ink">
               Results
-              <span className="text-slate-400 font-normal ml-2 text-sm">
-                {submitted.length} submitted
-                {inProgress.length > 0 && ` · ${inProgress.length} writing now`}
-              </span>
+              {inProgress.length > 0 && (
+                <span className="pill bg-emerald-50 text-emerald-700 ml-2.5">
+                  {inProgress.length} writing now
+                </span>
+              )}
             </h2>
             <div className="flex gap-2">
-              <Link
-                href={`/leaderboard/${examId}`}
-                className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50"
-              >
+              <Link href={`/leaderboard/${examId}`} className="btn btn-sm btn-outline">
                 🏆 Leaderboard
               </Link>
               <DownloadCsvButton
@@ -120,60 +147,80 @@ export default async function AdminExamPage({
           </div>
 
           {attempts.length === 0 ? (
-            <p className="p-6 text-center text-sm text-slate-500">No attempts yet.</p>
+            <div className="p-10 text-center">
+              <div className="mx-auto h-12 w-12 rounded-xl bg-slate-50 border border-line flex items-center justify-center text-xl mb-3">
+                👥
+              </div>
+              <p className="font-semibold text-ink text-sm">No attempts yet</p>
+              <p className="text-sm text-muted mt-1">
+                Students appear here the moment they start writing.
+              </p>
+            </div>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-slate-500 bg-slate-50">
-                  <th className="px-4 py-2.5">Student</th>
-                  <th className="px-4 py-2.5 text-right">Score</th>
-                  <th className="px-4 py-2.5 text-center hidden sm:table-cell">Violations</th>
-                  <th className="px-4 py-2.5 text-right hidden md:table-cell">Status</th>
-                  <th className="px-4 py-2.5" />
+                <tr className="text-left text-muted bg-slate-50/80 text-xs uppercase tracking-wider">
+                  <th className="px-5 py-3 font-semibold">Student</th>
+                  <th className="px-5 py-3 text-right font-semibold">Score</th>
+                  <th className="px-5 py-3 text-center hidden sm:table-cell font-semibold">
+                    Violations
+                  </th>
+                  <th className="px-5 py-3 text-right hidden md:table-cell font-semibold">
+                    Status
+                  </th>
+                  <th className="px-5 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-line">
                 {attempts.map((r) => {
                   const s = studentById.get(r.student_id.toString());
+                  const initial = (s?.full_name ?? s?.email ?? "?").charAt(0).toUpperCase();
                   return (
-                    <tr key={r._id.toString()}>
-                      <td className="px-4 py-2.5">
-                        <span className="font-medium text-slate-900">
-                          {s?.full_name ?? "—"}
-                        </span>
-                        <span className="text-slate-400 block text-xs">{s?.email}</span>
+                    <tr key={r._id.toString()} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <span className="h-8 w-8 shrink-0 rounded-full bg-slate-100 text-muted text-xs font-bold flex items-center justify-center">
+                            {initial}
+                          </span>
+                          <div className="min-w-0">
+                            <span className="font-semibold text-ink block truncate">
+                              {s?.full_name ?? "—"}
+                            </span>
+                            <span className="text-muted text-xs block truncate">{s?.email}</span>
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-4 py-2.5 text-right font-semibold">
+                      <td className="px-5 py-3.5 text-right">
                         {r.status === "submitted" ? (
                           <>
-                            {r.score}
-                            <span className="text-slate-400 font-normal">/{r.total}</span>
+                            <span className="font-display font-bold text-ink">{r.score}</span>
+                            <span className="text-muted">/{r.total}</span>
                           </>
                         ) : (
-                          <span className="text-emerald-600 text-xs font-medium">writing…</span>
+                          <span className="pill bg-emerald-50 text-emerald-700">writing…</span>
                         )}
                       </td>
-                      <td className="px-4 py-2.5 text-center hidden sm:table-cell">
+                      <td className="px-5 py-3.5 text-center hidden sm:table-cell">
                         {r.violations > 0 ? (
-                          <span className="text-amber-600 font-medium">⚠ {r.violations}</span>
+                          <span className="text-amber-600 font-semibold">⚠ {r.violations}</span>
                         ) : (
-                          <span className="text-slate-300">0</span>
+                          <span className="text-slate-300">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-2.5 text-right text-xs text-slate-500 hidden md:table-cell">
+                      <td className="px-5 py-3.5 text-right text-xs text-muted hidden md:table-cell">
                         {r.status === "submitted"
                           ? r.auto_submitted
                             ? "Auto-submitted"
                             : "Submitted"
                           : "In progress"}
                       </td>
-                      <td className="px-4 py-2.5 text-right">
+                      <td className="px-5 py-3.5 text-right">
                         {r.status === "submitted" && (
                           <Link
                             href={`/results/${r._id.toString()}`}
-                            className="text-xs text-indigo-600 hover:underline"
+                            className="text-xs font-semibold text-primary hover:text-primary-deep"
                           >
-                            View answers
+                            View answers →
                           </Link>
                         )}
                       </td>

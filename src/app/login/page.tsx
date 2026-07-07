@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Logo from "@/components/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,7 +29,7 @@ export default function LoginPage() {
         setError(body.error ?? "Could not send the code");
         return;
       }
-      setInfo("We emailed you a 6-digit code. It can take a minute to arrive — check spam too.");
+      setInfo("Code sent! It can take a minute to arrive — check spam too.");
       setStep("otp");
     } catch {
       setError("Network error — check your connection and try again.");
@@ -62,18 +63,27 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex-1 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">Aptitude Exam Portal</h1>
-          <p className="text-slate-500 mt-2">Sign in with your email to continue</p>
+    <main className="aurora relative flex-1 flex items-center justify-center p-4 overflow-hidden">
+      <div className="dotgrid absolute inset-0" aria-hidden />
+
+      <div className="relative w-full max-w-md fade-up">
+        <div className="flex flex-col items-center text-center mb-8">
+          <Logo className="h-14 w-14 mb-4" />
+          <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
+            Aptitude<span className="text-primary">·</span>Portal
+          </h1>
+          <p className="text-muted mt-2 text-[15px]">
+            {step === "email"
+              ? "Sign in with your email to continue"
+              : "One more step — enter your code"}
+          </p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div className="card p-7">
           {step === "email" ? (
-            <form onSubmit={sendOtp} className="space-y-4">
+            <form onSubmit={sendOtp} className="space-y-5">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
+                <label htmlFor="email" className="block text-sm font-semibold text-ink mb-1.5">
                   Email address
                 </label>
                 <input
@@ -84,23 +94,29 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="field"
                 />
               </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full rounded-lg bg-indigo-600 text-white font-medium py-2.5 hover:bg-indigo-700 disabled:opacity-50"
-              >
+              <button type="submit" disabled={loading} className="btn btn-lg btn-primary w-full">
                 {loading ? "Sending code…" : "Send login code"}
               </button>
+              <p className="text-xs text-muted text-center leading-relaxed">
+                No password needed — we&apos;ll email you a 6-digit code.
+                <br />
+                New here? Your account is created automatically.
+              </p>
             </form>
           ) : (
-            <form onSubmit={verifyOtp} className="space-y-4">
-              {info && <p className="text-sm text-emerald-700 bg-emerald-50 rounded-lg p-3">{info}</p>}
+            <form onSubmit={verifyOtp} className="space-y-5">
+              {info && (
+                <div className="flex items-start gap-2.5 text-sm text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-xl p-3.5">
+                  <span aria-hidden>✉️</span>
+                  <span>{info}</span>
+                </div>
+              )}
               <div>
-                <label htmlFor="otp" className="block text-sm font-medium text-slate-700 mb-1">
-                  6-digit code sent to <span className="font-semibold">{email}</span>
+                <label htmlFor="otp" className="block text-sm font-semibold text-ink mb-1.5">
+                  Code sent to <span className="text-primary">{email}</span>
                 </label>
                 <input
                   id="otp"
@@ -111,14 +127,14 @@ export default function LoginPage() {
                   autoFocus
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                  placeholder="123456"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-center text-2xl tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="••••••"
+                  className="field field-otp"
                 />
               </div>
               <button
                 type="submit"
                 disabled={loading || otp.length !== 6}
-                className="w-full rounded-lg bg-indigo-600 text-white font-medium py-2.5 hover:bg-indigo-700 disabled:opacity-50"
+                className="btn btn-lg btn-primary w-full"
               >
                 {loading ? "Verifying…" : "Verify & sign in"}
               </button>
@@ -130,14 +146,22 @@ export default function LoginPage() {
                   setInfo(null);
                   setError(null);
                 }}
-                className="w-full text-sm text-slate-500 hover:text-slate-700"
+                className="w-full text-sm font-medium text-muted hover:text-ink transition-colors"
               >
-                Use a different email
+                ← Use a different email
               </button>
             </form>
           )}
-          {error && <p className="text-sm text-red-600 mt-4">{error}</p>}
+          {error && (
+            <p className="flex items-start gap-2 text-sm text-danger bg-red-50 border border-red-100 rounded-xl p-3.5 mt-5">
+              <span aria-hidden>⚠</span> {error}
+            </p>
+          )}
         </div>
+
+        <p className="text-center text-xs text-muted mt-6">
+          Secure email verification · No passwords stored
+        </p>
       </div>
     </main>
   );

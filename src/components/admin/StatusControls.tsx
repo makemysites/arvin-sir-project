@@ -59,7 +59,7 @@ export default function StatusControls({
             }
           }}
           disabled={loading}
-          className="rounded-lg bg-emerald-600 text-white font-medium py-2 px-5 hover:bg-emerald-700 disabled:opacity-50"
+          className="btn btn-success"
         >
           ▶ Start exam
         </button>
@@ -76,7 +76,7 @@ export default function StatusControls({
             }
           }}
           disabled={loading}
-          className="rounded-lg bg-red-600 text-white font-medium py-2 px-5 hover:bg-red-700 disabled:opacity-50"
+          className="btn btn-danger"
         >
           ■ End exam
         </button>
@@ -84,11 +84,11 @@ export default function StatusControls({
       <button
         onClick={remove}
         disabled={loading}
-        className="text-sm text-red-500 hover:text-red-700 disabled:opacity-50"
+        className="text-sm font-medium text-muted hover:text-danger transition-colors disabled:opacity-50"
       >
-        Delete exam
+        Delete
       </button>
-      {error && <p className="w-full text-sm text-red-600">{error}</p>}
+      {error && <p className="w-full text-sm text-danger">{error}</p>}
     </div>
   );
 }
