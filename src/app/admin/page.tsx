@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/adminGuard";
+import { isAdminEmail } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import Header from "@/components/Header";
 import CreateExamForm from "@/components/admin/CreateExamForm";
+import MaterialsManager from "@/components/admin/MaterialsManager";
 
 export const dynamic = "force-dynamic";
 
@@ -18,23 +20,40 @@ export default async function AdminPage() {
   if (!admin) redirect("/");
 
   const db = await getDb();
-  const exams = await db
-    .collection("exams")
-    .find({})
-    .sort({ created_at: -1 })
-    .toArray();
+  const [exams, users, materialFiles] = await Promise.all([
+    db.collection("exams").find({}).sort({ created_at: -1 }).toArray(),
+    db.collection("users").find({}).project({ email: 1 }).toArray(),
+    db.collection("materials.files").find({}).sort({ uploadDate: -1 }).toArray(),
+  ]);
+
+  const studentCount = users.filter((u) => !isAdminEmail(u.email)).length;
+  const materials = materialFiles.map((f) => ({
+    id: f._id.toString(),
+    filename: String(f.filename ?? ""),
+    title: String(f.metadata?.title ?? f.filename ?? "Untitled"),
+    size: Number(f.length ?? 0),
+    uploadedAt: new Date(f.uploadDate).toISOString(),
+  }));
 
   return (
     <>
       <Header name={admin.email} isAdmin />
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-10 space-y-12">
-        <section className="fade-up">
-          <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
-            Exam console
-          </h1>
-          <p className="text-muted mt-1">
-            Create an exam, upload questions, and go live when your class is ready.
-          </p>
+        <section className="fade-up flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
+              Exam console
+            </h1>
+            <p className="text-muted mt-1">
+              Create an exam, upload questions, and go live when your class is ready.
+            </p>
+          </div>
+          <Link href="/admin/students" className="btn btn-outline">
+            👥 Students
+            <span className="ml-1 inline-flex items-center justify-center min-w-6 h-6 px-1.5 rounded-full bg-indigo-50 text-primary text-xs font-bold">
+              {studentCount}
+            </span>
+          </Link>
         </section>
 
         <section className="fade-up">
@@ -86,6 +105,11 @@ export default async function AdminPage() {
               ))}
             </div>
           )}
+        </section>
+
+        <section className="fade-up">
+          <h2 className="font-display text-lg font-bold text-ink mb-4">Study materials</h2>
+          <MaterialsManager materials={materials} />
         </section>
       </main>
     </>

@@ -92,6 +92,7 @@ export async function POST(request: Request) {
       option_b: q.option_b,
       option_c: q.option_c,
       option_d: q.option_d,
+      section: q.section ?? null,
     })),
   });
 }

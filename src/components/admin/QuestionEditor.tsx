@@ -10,6 +10,7 @@ export interface EditableQuestion {
   option_c: string;
   option_d: string;
   correct: string;
+  section: string;
 }
 
 const OPTION_KEYS = ["a", "b", "c", "d"] as const;
@@ -21,6 +22,7 @@ const EMPTY_ROW: EditableQuestion = {
   option_c: "",
   option_d: "",
   correct: "A",
+  section: "",
 };
 
 export default function QuestionEditor({
@@ -100,6 +102,11 @@ export default function QuestionEditor({
               <p className="font-semibold text-ink text-sm leading-relaxed whitespace-pre-wrap mb-2.5">
                 <span className="text-muted mr-1.5">{i + 1}.</span>
                 {q.question}
+                {q.section && (
+                  <span className="pill bg-indigo-50 text-primary ml-2 align-middle">
+                    {q.section}
+                  </span>
+                )}
               </p>
               <div className="grid sm:grid-cols-2 gap-1.5 text-sm">
                 {OPTION_KEYS.map((k) => {
@@ -213,24 +220,39 @@ export default function QuestionEditor({
                   </div>
                 ))}
               </div>
-              <div className="flex items-center gap-2.5 mt-3">
-                <label className="text-xs font-semibold text-muted uppercase tracking-wider">
-                  Correct answer
-                </label>
-                <div className="flex gap-1.5">
-                  {OPTION_KEYS.map((k) => (
-                    <button
-                      key={k}
-                      onClick={() => update(i, "correct", k.toUpperCase())}
-                      className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${
-                        q.correct === k.toUpperCase()
-                          ? "bg-emerald-600 text-white"
-                          : "bg-slate-100 text-muted hover:bg-slate-200"
-                      }`}
-                    >
-                      {k.toUpperCase()}
-                    </button>
-                  ))}
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mt-3">
+                <div className="flex items-center gap-2.5">
+                  <label className="text-xs font-semibold text-muted uppercase tracking-wider">
+                    Correct answer
+                  </label>
+                  <div className="flex gap-1.5">
+                    {OPTION_KEYS.map((k) => (
+                      <button
+                        key={k}
+                        onClick={() => update(i, "correct", k.toUpperCase())}
+                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${
+                          q.correct === k.toUpperCase()
+                            ? "bg-emerald-600 text-white"
+                            : "bg-slate-100 text-muted hover:bg-slate-200"
+                        }`}
+                      >
+                        {k.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <label className="text-xs font-semibold text-muted uppercase tracking-wider">
+                    Section
+                  </label>
+                  <input
+                    type="text"
+                    value={q.section}
+                    onChange={(e) => update(i, "section", e.target.value)}
+                    placeholder="e.g. Aptitude"
+                    maxLength={40}
+                    className="field text-sm py-1.5 w-40"
+                  />
                 </div>
               </div>
             </div>

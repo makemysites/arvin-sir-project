@@ -135,6 +135,11 @@ export default async function ResultsPage({
                     <p className="font-semibold text-ink leading-relaxed whitespace-pre-wrap">
                       <span className="text-muted mr-1.5">{i + 1}.</span>
                       {q.question}
+                      {q.section && (
+                        <span className="pill bg-violet-50 text-violet-700 ml-2 align-middle">
+                          {q.section}
+                        </span>
+                      )}
                     </p>
                     <span
                       className={`pill shrink-0 ${

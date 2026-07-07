@@ -50,6 +50,7 @@ export async function POST(
       option_c: String(q.option_c).trim(),
       option_d: String(q.option_d).trim(),
       correct,
+      section: q.section ? String(q.section).trim().slice(0, 40) : null,
     });
   }
 

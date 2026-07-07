@@ -21,6 +21,7 @@ export interface Question {
   option_c: string;
   option_d: string;
   correct: OptionKey;
+  section: string | null;
 }
 
 // What the student's browser receives during an exam (no `correct`).

@@ -13,7 +13,7 @@ export default async function Dashboard() {
   if (isAdminEmail(user.email)) redirect("/admin");
 
   const db = await getDb();
-  const [profile, exams, attempts] = await Promise.all([
+  const [profile, exams, attempts, materialFiles] = await Promise.all([
     db.collection("users").findOne({ _id: new ObjectId(user.id) }),
     db
       .collection("exams")
@@ -21,6 +21,7 @@ export default async function Dashboard() {
       .sort({ created_at: -1 })
       .toArray(),
     db.collection("attempts").find({ student_id: new ObjectId(user.id) }).toArray(),
+    db.collection("materials.files").find({}).sort({ uploadDate: -1 }).toArray(),
   ]);
 
   if (!profile?.full_name) redirect("/setup");
@@ -112,6 +113,51 @@ export default async function Dashboard() {
             </div>
           )}
         </section>
+
+        {materialFiles.length > 0 && (
+          <section className="fade-up">
+            <h2 className="font-display text-lg font-bold text-ink mb-4">Study materials</h2>
+            <div className="card divide-y divide-line overflow-hidden">
+              {materialFiles.map((m) => {
+                const size = Number(m.length ?? 0);
+                const sizeLabel =
+                  size < 1024 * 1024
+                    ? `${Math.round(size / 1024)} KB`
+                    : `${(size / (1024 * 1024)).toFixed(1)} MB`;
+                return (
+                  <div
+                    key={m._id.toString()}
+                    className="p-4 flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="h-10 w-10 shrink-0 rounded-xl bg-indigo-50 flex items-center justify-center text-lg">
+                        📚
+                      </span>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-ink text-sm truncate">
+                          {String(m.metadata?.title ?? m.filename)}
+                        </p>
+                        <p className="text-xs text-muted">
+                          {sizeLabel} ·{" "}
+                          {new Date(m.uploadDate).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    <a
+                      href={`/api/materials/${m._id.toString()}`}
+                      className="btn btn-sm btn-outline shrink-0"
+                    >
+                      ⬇ Download
+                    </a>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         <section className="fade-up">
           <h2 className="font-display text-lg font-bold text-ink mb-4">Past exams</h2>

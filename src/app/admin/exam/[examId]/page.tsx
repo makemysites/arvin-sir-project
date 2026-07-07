@@ -56,6 +56,7 @@ export default async function AdminExamPage({
     option_c: q.option_c as string,
     option_d: q.option_d as string,
     correct: q.correct as string,
+    section: (q.section as string | null) ?? "",
   }));
 
   const studentIds = attempts.map((a) => a.student_id);

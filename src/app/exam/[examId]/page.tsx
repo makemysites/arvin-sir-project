@@ -310,6 +310,18 @@ export default function ExamPage({
   const answeredCount = Object.keys(answers).length;
   const progress = Math.round((answeredCount / data.questions.length) * 100);
 
+  // Group consecutive questions by section for the palette (empty section = "Questions").
+  const paletteGroups: { section: string; items: { id: string; index: number }[] }[] = [];
+  data.questions.forEach((question, index) => {
+    const section = question.section ?? "";
+    const last = paletteGroups[paletteGroups.length - 1];
+    if (!last || last.section !== section) {
+      paletteGroups.push({ section, items: [] });
+    }
+    paletteGroups[paletteGroups.length - 1].items.push({ id: question.id, index });
+  });
+  const hasSections = paletteGroups.some((g) => g.section !== "");
+
   return (
     <main className="flex-1 flex flex-col max-w-5xl w-full mx-auto px-4 py-5">
       {/* Warning modal */}
@@ -373,9 +385,14 @@ export default function ExamPage({
       <div className="flex flex-col lg:flex-row gap-5 flex-1">
         {/* Question card */}
         <div className="flex-1 card p-6 sm:p-8 flex flex-col">
-          <p className="pill bg-indigo-50 text-primary w-fit mb-4">
-            Question {current + 1} / {data.questions.length}
-          </p>
+          <div className="flex items-center gap-2 mb-4">
+            <p className="pill bg-indigo-50 text-primary w-fit">
+              Question {current + 1} / {data.questions.length}
+            </p>
+            {q.section && (
+              <p className="pill bg-violet-50 text-violet-700 w-fit">{q.section}</p>
+            )}
+          </div>
           <p className="font-display text-lg sm:text-xl font-semibold text-ink leading-relaxed mb-7 whitespace-pre-wrap">
             {q.question}
           </p>
@@ -450,26 +467,30 @@ export default function ExamPage({
 
         {/* Question palette */}
         <div className="lg:w-60 card p-5 h-fit">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted mb-3.5">
-            Questions
-          </p>
-          <div className="grid grid-cols-8 lg:grid-cols-5 gap-2">
-            {data.questions.map((question, i) => (
-              <button
-                key={question.id}
-                onClick={() => setCurrent(i)}
-                className={`h-9 rounded-lg text-xs font-bold transition-colors ${
-                  i === current
-                    ? "bg-ink text-white"
-                    : answers[question.id]
-                      ? "bg-indigo-100 text-primary-deep"
-                      : "bg-slate-100 text-muted hover:bg-slate-200"
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-          </div>
+          {paletteGroups.map((group, gi) => (
+            <div key={gi} className={gi > 0 ? "mt-4" : undefined}>
+              <p className="text-xs font-bold uppercase tracking-wider text-muted mb-2.5">
+                {group.section || (hasSections ? "Other" : "Questions")}
+              </p>
+              <div className="grid grid-cols-8 lg:grid-cols-5 gap-2">
+                {group.items.map(({ id, index }) => (
+                  <button
+                    key={id}
+                    onClick={() => setCurrent(index)}
+                    className={`h-9 rounded-lg text-xs font-bold transition-colors ${
+                      index === current
+                        ? "bg-ink text-white"
+                        : answers[id]
+                          ? "bg-indigo-100 text-primary-deep"
+                          : "bg-slate-100 text-muted hover:bg-slate-200"
+                    }`}
+                  >
+                    {index + 1}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
           <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-4 text-[11px] text-muted">
             <span className="flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded bg-indigo-100 border border-indigo-200" /> Answered

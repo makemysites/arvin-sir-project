@@ -10,7 +10,10 @@ A free online examination platform with its own custom backend. The teacher (adm
 
 **Admin (teacher)**
 - Create an exam with any title and duration (in minutes)
-- Upload questions from Excel — columns: `Question | Option A | Option B | Option C | Option D | Correct (A/B/C/D)` (see `sample-questions.xlsx`)
+- Upload questions from Excel — columns: `Question | Option A | Option B | Option C | Option D | Correct (A/B/C/D) | Section (optional)` (see `sample-questions.xlsx`)
+- View and edit every question in the browser (fix typos, change options/answers, add or delete questions) while the exam is a draft
+- Upload study materials (PDFs/notes up to 4 MB) that students download from their dashboard
+- See every registered student (name, email, signup date) under Admin → Students
 - Preview the parsed questions before saving
 - Start the exam with one click, end it with one click
 - Live results table: who submitted, who is still writing, scores, cheating warnings
@@ -97,9 +100,12 @@ Open http://localhost:3000 and sign in with the admin email — the OTP arrives 
 
 **Excel format** (first sheet, header row optional — see `sample-questions.xlsx`):
 
-| Question | Option A | Option B | Option C | Option D | Correct |
-|---|---|---|---|---|---|
-| What is 15% of 200? | 20 | 25 | 30 | 35 | C |
+| Question | Option A | Option B | Option C | Option D | Correct | Section |
+|---|---|---|---|---|---|---|
+| What is 15% of 200? | 20 | 25 | 30 | 35 | C | Aptitude |
+| Next in series: 2, 6, 12, 20, ? | 30 | 28 | 26 | 32 | A | Reasoning |
+
+The **Section** column is optional — when used, students see the section name on each question and the question palette groups by section (e.g. Aptitude, Reasoning, Verbal). Keep questions of the same section together in the sheet.
 
 **Students:**
 1. Open the site → enter email → type the 6-digit code from the email.

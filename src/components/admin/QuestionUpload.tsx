@@ -11,10 +11,12 @@ interface ParsedQuestion {
   option_c: string;
   option_d: string;
   correct: string;
+  section: string;
 }
 
 // Expected sheet layout: column 1 = question, columns 2-5 = options A-D,
-// column 6 = correct option (A/B/C/D). A header row is detected and skipped.
+// column 6 = correct option (A/B/C/D), column 7 = section (optional, e.g.
+// "Aptitude" / "Reasoning"). A header row is detected and skipped.
 function parseSheet(data: ArrayBuffer): { questions: ParsedQuestion[]; problems: string[] } {
   const workbook = XLSX.read(data, { type: "array" });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -27,7 +29,7 @@ function parseSheet(data: ArrayBuffer): { questions: ParsedQuestion[]; problems:
     const cells = row.map((c) => String(c ?? "").trim());
     if (cells.every((c) => c === "")) return; // skip blank rows
 
-    const [question, a, b, c, d, correctRaw] = cells;
+    const [question, a, b, c, d, correctRaw, sectionRaw] = cells;
     const correct = (correctRaw ?? "").toUpperCase();
 
     // Skip a header row like "Question | A | B | C | D | Correct"
@@ -41,7 +43,15 @@ function parseSheet(data: ArrayBuffer): { questions: ParsedQuestion[]; problems:
       problems.push(`Row ${index + 1}: correct answer must be A, B, C or D (got "${correctRaw}")`);
       return;
     }
-    questions.push({ question, option_a: a, option_b: b, option_c: c, option_d: d, correct });
+    questions.push({
+      question,
+      option_a: a,
+      option_b: b,
+      option_c: c,
+      option_d: d,
+      correct,
+      section: sectionRaw ?? "",
+    });
   });
 
   return { questions, problems };
@@ -122,7 +132,8 @@ export default function QuestionUpload({
             Click to choose an Excel file
           </p>
           <p className="text-xs text-muted mt-1.5">
-            Columns: Question · Option A · B · C · D · Correct (A/B/C/D) — .xlsx, .xls or .csv
+            Columns: Question · Option A · B · C · D · Correct (A/B/C/D) · Section (optional) —
+            .xlsx, .xls or .csv
           </p>
         </label>
       )}
@@ -164,6 +175,7 @@ export default function QuestionUpload({
                       <th className="px-3 py-2.5 font-semibold">C</th>
                       <th className="px-3 py-2.5 font-semibold">D</th>
                       <th className="px-3 py-2.5 w-14 font-semibold">Ans</th>
+                      <th className="px-3 py-2.5 font-semibold">Section</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line">
@@ -180,6 +192,7 @@ export default function QuestionUpload({
                             {q.correct}
                           </span>
                         </td>
+                        <td className="px-3 py-2 text-muted">{q.section || "—"}</td>
                       </tr>
                     ))}
                   </tbody>
