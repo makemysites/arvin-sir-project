@@ -50,5 +50,6 @@ export async function POST(request: Request) {
   }
 
   await createSession({ id: user._id.toString(), email });
-  return NextResponse.json({ ok: true });
+  // Tells the login page to collect the student's name right after signup.
+  return NextResponse.json({ ok: true, needsName: !user.full_name });
 }

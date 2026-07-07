@@ -25,6 +25,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "This exam is not live" }, { status: 403 });
   }
 
+  // Students must have a name before writing (it appears on the leaderboard).
+  const student = await db.collection("users").findOne({ _id: studentOid });
+  if (!student?.full_name) {
+    return NextResponse.json(
+      { error: "Please set your name before starting the exam" },
+      { status: 428 }
+    );
+  }
+
   const attempts = db.collection("attempts");
   let attempt = await attempts.findOne({ exam_id: examOid, student_id: studentOid });
 

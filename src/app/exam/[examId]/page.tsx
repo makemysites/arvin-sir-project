@@ -144,6 +144,12 @@ export default function ExamPage({
       router.replace(`/results/${body.attemptId}`);
       return;
     }
+    if (res.status === 428) {
+      // No name on the profile yet — collect it, then come back.
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      router.replace("/setup");
+      return;
+    }
     if (!res.ok) {
       setError(body.error ?? "Could not start the exam");
       setPhase("rules");

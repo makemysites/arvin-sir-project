@@ -2,7 +2,7 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
 const COOKIE_NAME = "exam_session";
-const SESSION_DAYS = 30;
+const SESSION_DAYS = 7;
 
 export interface SessionUser {
   id: string; // users._id as hex string

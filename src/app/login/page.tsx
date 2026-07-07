@@ -7,9 +7,10 @@ import Logo from "@/components/Logo";
 export default function LoginPage() {
   const router = useRouter();
 
-  const [step, setStep] = useState<"email" | "otp">("email");
+  const [step, setStep] = useState<"email" | "otp" | "name">("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
+  const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -53,6 +54,34 @@ export default function LoginPage() {
         setError(body.error ?? "Invalid or expired code. Please try again.");
         return;
       }
+      if (body.needsName) {
+        setInfo(null);
+        setStep("name");
+        return;
+      }
+      router.push("/");
+      router.refresh();
+    } catch {
+      setError("Network error — check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveName(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ full_name: name.trim() }),
+      });
+      if (!res.ok) {
+        setError("Could not save your name. Please try again.");
+        return;
+      }
       router.push("/");
       router.refresh();
     } catch {
@@ -75,7 +104,9 @@ export default function LoginPage() {
           <p className="text-muted mt-2 text-[15px]">
             {step === "email"
               ? "Sign in with your email to continue"
-              : "One more step — enter your code"}
+              : step === "otp"
+                ? "One more step — enter your code"
+                : "Last step — tell us your name"}
           </p>
         </div>
 
@@ -106,7 +137,7 @@ export default function LoginPage() {
                 New here? Your account is created automatically.
               </p>
             </form>
-          ) : (
+          ) : step === "otp" ? (
             <form onSubmit={verifyOtp} className="space-y-5">
               {info && (
                 <div className="flex items-start gap-2.5 text-sm text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-xl p-3.5">
@@ -149,6 +180,40 @@ export default function LoginPage() {
                 className="w-full text-sm font-medium text-muted hover:text-ink transition-colors"
               >
                 ← Use a different email
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={saveName} className="space-y-5">
+              <div className="flex items-start gap-2.5 text-sm text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-xl p-3.5">
+                <span aria-hidden>🎉</span>
+                <span>You&apos;re verified! One last thing before you head in.</span>
+              </div>
+              <div>
+                <label htmlFor="name" className="block text-sm font-semibold text-ink mb-1.5">
+                  Full name
+                  <span className="block text-xs font-normal text-muted mt-0.5">
+                    This is how you&apos;ll appear on the leaderboard.
+                  </span>
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  required
+                  minLength={2}
+                  maxLength={80}
+                  autoFocus
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Abhinay Kumar"
+                  className="field"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading || name.trim().length < 2}
+                className="btn btn-primary w-full py-3"
+              >
+                {loading ? "Saving…" : "Finish & go to dashboard →"}
               </button>
             </form>
           )}
