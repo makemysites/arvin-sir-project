@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/adminGuard";
 import { getDb } from "@/lib/db";
 import Header from "@/components/Header";
 import QuestionUpload from "@/components/admin/QuestionUpload";
+import QuestionEditor from "@/components/admin/QuestionEditor";
 import StatusControls from "@/components/admin/StatusControls";
 import DownloadCsvButton from "@/components/admin/DownloadCsvButton";
 import type { ExamStatus } from "@/lib/types";
@@ -30,9 +31,13 @@ export default async function AdminExamPage({
   const examOid = new ObjectId(examId);
 
   const db = await getDb();
-  const [exam, questionCount, attempts] = await Promise.all([
+  const [exam, questionDocs, attempts] = await Promise.all([
     db.collection("exams").findOne({ _id: examOid }),
-    db.collection("questions").countDocuments({ exam_id: examOid }),
+    db
+      .collection("questions")
+      .find({ exam_id: examOid })
+      .sort({ position: 1 })
+      .toArray(),
     db
       .collection("attempts")
       .find({ exam_id: examOid })
@@ -41,6 +46,17 @@ export default async function AdminExamPage({
   ]);
 
   if (!exam) notFound();
+
+  const questionCount = questionDocs.length;
+  // Plain objects for the client-side editor.
+  const editorRows = questionDocs.map((q) => ({
+    question: q.question as string,
+    option_a: q.option_a as string,
+    option_b: q.option_b as string,
+    option_c: q.option_c as string,
+    option_d: q.option_d as string,
+    correct: q.correct as string,
+  }));
 
   const studentIds = attempts.map((a) => a.student_id);
   const students = studentIds.length
@@ -124,6 +140,16 @@ export default async function AdminExamPage({
             <QuestionUpload examId={examId} existingCount={questionCount} />
           </div>
         )}
+
+        <div className="fade-up">
+          <QuestionEditor
+            // Remounts with fresh rows whenever the question set changes (e.g. new upload).
+            key={`${questionCount}-${questionDocs[0]?._id ?? "empty"}`}
+            examId={examId}
+            questions={editorRows}
+            editable={exam.status === "draft"}
+          />
+        </div>
 
         <section className="card overflow-hidden fade-up">
           <div className="p-5 flex items-center justify-between flex-wrap gap-3 border-b border-line">
