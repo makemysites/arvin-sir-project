@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { EXAM_CATEGORIES, type ExamCategory } from "@/lib/types";
 
 export default function CreateExamForm() {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [duration, setDuration] = useState(30);
+  const [category, setCategory] = useState<ExamCategory>("Aptitude");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,7 +19,7 @@ export default function CreateExamForm() {
     const res = await fetch("/api/admin/exams", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, duration_minutes: duration }),
+      body: JSON.stringify({ title, duration_minutes: duration, category }),
     });
     const body = await res.json();
     setLoading(false);
@@ -58,6 +60,27 @@ export default function CreateExamForm() {
       <button type="submit" disabled={loading} className="btn btn-primary">
         {loading ? "Creating…" : "+ Create exam"}
       </button>
+      <div className="w-full">
+        <label className="block text-sm font-semibold text-ink mb-1.5">Category</label>
+        <div className="flex flex-wrap gap-2">
+          {EXAM_CATEGORIES.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setCategory(c)}
+              className={`btn btn-sm ${
+                category === c ? "btn-primary" : "btn-outline"
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-muted mt-1.5">
+          Students can filter exams by category. For a Combined test, use the optional
+          &quot;Section&quot; column in the Excel to label each question.
+        </p>
+      </div>
       {error && <p className="w-full text-sm text-danger">{error}</p>}
     </form>
   );

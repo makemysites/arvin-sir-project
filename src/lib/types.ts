@@ -1,6 +1,17 @@
 export type ExamStatus = "draft" | "live" | "ended";
 export type OptionKey = "A" | "B" | "C" | "D";
 
+export const EXAM_CATEGORIES = ["Aptitude", "Reasoning", "English", "Combined"] as const;
+export type ExamCategory = (typeof EXAM_CATEGORIES)[number];
+
+// Badge styles per category (shared by dashboard + admin).
+export const CATEGORY_PILL: Record<string, string> = {
+  Aptitude: "bg-indigo-50 text-primary",
+  Reasoning: "bg-violet-50 text-violet-700",
+  English: "bg-emerald-50 text-emerald-700",
+  Combined: "bg-amber-50 text-amber-700",
+};
+
 export interface Exam {
   id: string;
   title: string;

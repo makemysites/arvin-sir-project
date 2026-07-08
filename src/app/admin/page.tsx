@@ -6,6 +6,7 @@ import { getDb } from "@/lib/db";
 import Header from "@/components/Header";
 import CreateExamForm from "@/components/admin/CreateExamForm";
 import MaterialsManager from "@/components/admin/MaterialsManager";
+import { CATEGORY_PILL } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -87,7 +88,16 @@ export default async function AdminPage() {
                       {exam.status === "live" ? "🟢" : exam.status === "ended" ? "🏁" : "📄"}
                     </div>
                     <div className="min-w-0">
-                      <h3 className="font-semibold text-ink truncate">{exam.title}</h3>
+                      <h3 className="font-semibold text-ink truncate">
+                        {exam.title}
+                        {exam.category && (
+                          <span
+                            className={`pill ml-2 align-middle ${CATEGORY_PILL[exam.category] ?? "bg-slate-100 text-muted"}`}
+                          >
+                            {exam.category}
+                          </span>
+                        )}
+                      </h3>
                       <p className="text-sm text-muted">
                         {exam.duration_minutes} min ·{" "}
                         {new Date(exam.created_at).toLocaleDateString("en-IN", {

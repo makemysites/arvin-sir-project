@@ -4,10 +4,15 @@ import { ObjectId, type WithId, type Document } from "mongodb";
 import { getUser, isAdminEmail } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import Header from "@/components/Header";
+import { CATEGORY_PILL, EXAM_CATEGORIES } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function Dashboard() {
+export default async function Dashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
   const user = await getUser();
   if (!user) redirect("/login");
   if (isAdminEmail(user.email)) redirect("/admin");
@@ -29,8 +34,16 @@ export default async function Dashboard() {
   const attemptByExam = new Map<string, WithId<Document>>(
     attempts.map((a) => [a.exam_id.toString(), a])
   );
-  const liveExams = exams.filter((e) => e.status === "live");
-  const pastExams = exams.filter((e) => e.status === "ended");
+
+  // Category tabs: /dashboard?category=Aptitude etc.
+  const { category: rawCategory } = await searchParams;
+  const activeCategory = EXAM_CATEGORIES.find((c) => c === rawCategory) ?? null;
+  const visibleExams = activeCategory
+    ? exams.filter((e) => e.category === activeCategory)
+    : exams;
+
+  const liveExams = visibleExams.filter((e) => e.status === "live");
+  const pastExams = visibleExams.filter((e) => e.status === "ended");
   const firstName = String(profile.full_name).trim().split(/\s+/)[0];
 
   return (
@@ -48,6 +61,23 @@ export default async function Dashboard() {
           <h1 className="font-display text-3xl font-bold tracking-tight text-ink mt-1">
             Hey, {firstName} 👋
           </h1>
+          <nav className="flex flex-wrap gap-2 mt-5" aria-label="Exam categories">
+            <Link
+              href="/dashboard"
+              className={`btn btn-sm ${!activeCategory ? "bg-ink text-white" : "btn-outline"}`}
+            >
+              All exams
+            </Link>
+            {EXAM_CATEGORIES.map((c) => (
+              <Link
+                key={c}
+                href={`/dashboard?category=${c}`}
+                className={`btn btn-sm ${activeCategory === c ? "bg-ink text-white" : "btn-outline"}`}
+              >
+                {c}
+              </Link>
+            ))}
+          </nav>
         </section>
 
         <section className="fade-up">
@@ -63,7 +93,9 @@ export default async function Dashboard() {
               <div className="mx-auto h-14 w-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-2xl mb-4">
                 🕰️
               </div>
-              <p className="font-semibold text-ink">No exam is running right now</p>
+              <p className="font-semibold text-ink">
+                No {activeCategory ? `${activeCategory} ` : ""}exam is running right now
+              </p>
               <p className="text-sm text-muted mt-1">
                 Your teacher will start one when it&apos;s time — keep this page handy.
               </p>
@@ -88,6 +120,11 @@ export default async function Dashboard() {
                         <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
                       </span>
                       <span className="pill bg-emerald-50 text-emerald-700">Live now</span>
+                      {exam.category && (
+                        <span className={`pill ${CATEGORY_PILL[exam.category] ?? "bg-slate-100 text-muted"}`}>
+                          {exam.category}
+                        </span>
+                      )}
                     </div>
                     <h3 className="font-display font-bold text-lg text-ink leading-snug">
                       {exam.title}
@@ -190,7 +227,16 @@ export default async function Dashboard() {
                         {pct === null ? "—" : `${pct}%`}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-semibold text-ink truncate">{exam.title}</h3>
+                        <h3 className="font-semibold text-ink truncate">
+                          {exam.title}
+                          {exam.category && (
+                            <span
+                              className={`pill ml-2 align-middle ${CATEGORY_PILL[exam.category] ?? "bg-slate-100 text-muted"}`}
+                            >
+                              {exam.category}
+                            </span>
+                          )}
+                        </h3>
                         <p className="text-sm text-muted">
                           {attempt
                             ? `Your score: ${attempt.score}/${attempt.total}`

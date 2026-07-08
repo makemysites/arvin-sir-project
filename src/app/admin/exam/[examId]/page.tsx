@@ -8,7 +8,7 @@ import QuestionUpload from "@/components/admin/QuestionUpload";
 import QuestionEditor from "@/components/admin/QuestionEditor";
 import StatusControls from "@/components/admin/StatusControls";
 import DownloadCsvButton from "@/components/admin/DownloadCsvButton";
-import type { ExamStatus } from "@/lib/types";
+import { CATEGORY_PILL, type ExamStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -114,6 +114,11 @@ export default async function AdminExamPage({
                   {exam.title}
                 </h1>
                 <span className={`pill ${STATUS_PILL[exam.status]}`}>{exam.status}</span>
+                {exam.category && (
+                  <span className={`pill ${CATEGORY_PILL[exam.category] ?? "bg-slate-100 text-muted"}`}>
+                    {exam.category}
+                  </span>
+                )}
               </div>
             </div>
             <StatusControls
