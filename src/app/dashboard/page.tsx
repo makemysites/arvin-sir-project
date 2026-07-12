@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ObjectId, type WithId, type Document } from "mongodb";
-import { getUser, isAdminEmail } from "@/lib/auth";
+import { getUser, checkIsAdmin } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import Header from "@/components/Header";
 import { CATEGORY_PILL, EXAM_CATEGORIES } from "@/lib/types";
@@ -15,7 +15,7 @@ export default async function Dashboard({
 }) {
   const user = await getUser();
   if (!user) redirect("/login");
-  if (isAdminEmail(user.email)) redirect("/admin");
+  if (await checkIsAdmin(user.email)) redirect("/admin");
 
   const db = await getDb();
   const [profile, exams, attempts, materialFiles] = await Promise.all([

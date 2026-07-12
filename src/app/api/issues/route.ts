@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import { getUser, isAdminEmail } from "@/lib/auth";
+import { getUser, checkIsAdmin } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 
 // Students report issues during or after an exam.
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 // Admin fetches issues for a specific exam.
 export async function GET(request: NextRequest) {
   const user = await getUser();
-  if (!user || !isAdminEmail(user.email)) {
+  if (!user || !(await checkIsAdmin(user.email))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

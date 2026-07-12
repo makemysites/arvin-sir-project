@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/adminGuard";
-import { isAdminEmail } from "@/lib/auth";
+import { getAllAdminEmails } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import Header from "@/components/Header";
 import CreateExamForm from "@/components/admin/CreateExamForm";
 import MaterialsManager from "@/components/admin/MaterialsManager";
+import AdminManager from "@/components/admin/AdminManager";
 import { CATEGORY_PILL } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,8 @@ export default async function AdminPage() {
     db.collection("materials.files").find({}).sort({ uploadDate: -1 }).toArray(),
   ]);
 
-  const studentCount = users.filter((u) => !isAdminEmail(u.email)).length;
+  const allAdminEmails = await getAllAdminEmails();
+  const studentCount = users.filter((u) => !allAdminEmails.has((u.email as string).toLowerCase())).length;
   const materials = materialFiles.map((f) => ({
     id: f._id.toString(),
     filename: String(f.filename ?? ""),
@@ -120,6 +122,11 @@ export default async function AdminPage() {
         <section className="fade-up">
           <h2 className="font-display text-lg font-bold text-ink mb-4">Study materials</h2>
           <MaterialsManager materials={materials} />
+        </section>
+
+        <section className="fade-up">
+          <h2 className="font-display text-lg font-bold text-ink mb-4">Admin management</h2>
+          <AdminManager currentUserEmail={admin.email} />
         </section>
       </main>
     </>

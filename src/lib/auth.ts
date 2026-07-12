@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { getDb } from "@/lib/db";
 
 const COOKIE_NAME = "exam_session";
 const SESSION_DAYS = 7;
@@ -56,4 +57,36 @@ export function isAdminEmail(email: string | undefined | null): boolean {
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
   return admins.includes(email.toLowerCase());
+}
+
+// Super admin can never be removed.
+export const SUPER_ADMIN_EMAIL = "tippaniabhinay@gmail.com";
+
+export function isSuperAdmin(email: string | undefined | null): boolean {
+  if (!email) return false;
+  return email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+}
+
+// Checks env-based admins AND database admins.
+export async function checkIsAdmin(email: string | undefined | null): Promise<boolean> {
+  if (!email) return false;
+  if (isAdminEmail(email)) return true;
+  if (isSuperAdmin(email)) return true;
+  const db = await getDb();
+  const doc = await db.collection("admins").findOne({ email: email.toLowerCase() });
+  return !!doc;
+}
+
+// Returns all admin emails (env + database) for bulk filtering.
+export async function getAllAdminEmails(): Promise<Set<string>> {
+  const envAdmins = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  if (!envAdmins.includes(SUPER_ADMIN_EMAIL.toLowerCase())) {
+    envAdmins.push(SUPER_ADMIN_EMAIL.toLowerCase());
+  }
+  const db = await getDb();
+  const dbAdmins = await db.collection("admins").find({}).project({ email: 1 }).toArray();
+  return new Set([...envAdmins, ...dbAdmins.map((a) => (a.email as string).toLowerCase())]);
 }

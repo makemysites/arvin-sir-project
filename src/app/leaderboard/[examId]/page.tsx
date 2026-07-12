@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { ObjectId } from "mongodb";
-import { getUser, isAdminEmail } from "@/lib/auth";
+import { getUser, checkIsAdmin } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import Header from "@/components/Header";
 
@@ -17,7 +17,7 @@ export default async function LeaderboardPage({
 
   const user = await getUser();
   if (!user) redirect("/login");
-  const admin = isAdminEmail(user.email);
+  const admin = await checkIsAdmin(user.email);
 
   const db = await getDb();
   const examOid = new ObjectId(examId);
