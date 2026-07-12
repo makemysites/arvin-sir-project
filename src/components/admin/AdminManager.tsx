@@ -164,7 +164,7 @@ export default function AdminManager({
                         <span className="pill bg-indigo-50 text-primary">You</span>
                       )}
                       {admin.source === "env" && !admin.isSuperAdmin && (
-                        <span className="pill bg-slate-100 text-muted">ENV</span>
+                        <span className="pill bg-slate-100 text-muted">Admin</span>
                       )}
                     </div>
                     {admin.addedBy && (
