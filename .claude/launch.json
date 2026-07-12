@@ -5,6 +5,13 @@
       "name": "exam-platform",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
+      "port": 3000,
+      "autoPort": true
+    },
+    {
+      "name": "lifeos",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "D:/Projects/Vibe Coding/Project-1/LifeOS/artifacts/lifeos", "dev"],
       "port": 3000
     }
   ]

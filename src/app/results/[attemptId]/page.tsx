@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb";
 import { getUser, isAdminEmail } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import Header from "@/components/Header";
+import ReviewForm from "@/components/ReviewForm";
 import type { OptionKey } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -67,10 +68,17 @@ export default async function ResultsPage({
   if (!admin && attempt.student_id.toString() !== user.id) notFound();
   if (attempt.status !== "submitted") redirect(`/exam/${attempt.exam_id.toString()}`);
 
-  const [exam, student, viewer] = await Promise.all([
+  const isOwnAttempt = attempt.student_id.toString() === user.id;
+  const [exam, student, viewer, myReview] = await Promise.all([
     db.collection("exams").findOne({ _id: attempt.exam_id }),
     db.collection("users").findOne({ _id: attempt.student_id }),
     db.collection("users").findOne({ _id: new ObjectId(user.id) }),
+    isOwnAttempt
+      ? db.collection("reviews").findOne({
+          exam_id: attempt.exam_id,
+          student_id: attempt.student_id,
+        })
+      : Promise.resolve(null),
   ]);
   if (!exam) notFound();
 
@@ -112,6 +120,14 @@ export default async function ResultsPage({
             )}
           </div>
         </div>
+
+        {isOwnAttempt && (
+          <ReviewForm
+            examId={exam._id.toString()}
+            initialRating={myReview?.rating ?? null}
+            initialComment={myReview?.comment ?? ""}
+          />
+        )}
 
         {!canReview ? (
           <div className="card p-8 text-center fade-up">
@@ -193,6 +209,20 @@ export default async function ResultsPage({
                       );
                     })}
                   </div>
+                  {q.explanation_image_id && (
+                    <div className="mt-4">
+                      <p className="text-xs font-bold uppercase tracking-wider text-muted mb-2">
+                        📝 Teacher&apos;s explanation
+                      </p>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`/api/explanations/${q.explanation_image_id.toString()}`}
+                        alt={`Explanation for question ${i + 1}`}
+                        loading="lazy"
+                        className="rounded-xl border border-line max-h-[28rem] w-auto"
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export interface EditableQuestion {
+  id?: string | null; // set for questions already saved in the database
   question: string;
   option_a: string;
   option_b: string;
@@ -11,11 +12,13 @@ export interface EditableQuestion {
   option_d: string;
   correct: string;
   section: string;
+  explanation_image_id?: string | null;
 }
 
 const OPTION_KEYS = ["a", "b", "c", "d"] as const;
 
 const EMPTY_ROW: EditableQuestion = {
+  id: null,
   question: "",
   option_a: "",
   option_b: "",
@@ -23,7 +26,24 @@ const EMPTY_ROW: EditableQuestion = {
   option_d: "",
   correct: "A",
   section: "",
+  explanation_image_id: null,
 };
+
+// Shrinks big photos so they upload fast and fit the 4 MB server cap.
+async function compressImage(file: File): Promise<Blob> {
+  const MAX_DIM = 1600;
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, MAX_DIM / Math.max(bitmap.width, bitmap.height));
+  if (scale === 1 && file.size <= 1.5 * 1024 * 1024) return file;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/jpeg", 0.85)
+  );
+  return blob ?? file;
+}
 
 export default function QuestionEditor({
   examId,
@@ -38,9 +58,10 @@ export default function QuestionEditor({
   const [rows, setRows] = useState<EditableQuestion[]>(questions);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  function update(index: number, field: keyof EditableQuestion, value: string) {
+  function update(index: number, field: keyof EditableQuestion, value: string | null) {
     setRows((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
     setDirty(true);
     setError(null);
@@ -55,6 +76,76 @@ export default function QuestionEditor({
   function addRow() {
     setRows((prev) => [...prev, { ...EMPTY_ROW }]);
     setDirty(true);
+  }
+
+  async function uploadImage(file: File): Promise<string> {
+    if (!file.type.startsWith("image/")) {
+      throw new Error("Only image files are allowed (JPG, PNG, …)");
+    }
+    const blob = await compressImage(file);
+    const form = new FormData();
+    form.append("file", new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" }));
+    const res = await fetch(`/api/admin/exams/${examId}/explanations`, {
+      method: "POST",
+      body: form,
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error ?? "Image upload failed");
+    return body.imageId as string;
+  }
+
+  // Draft mode: the image id is kept in the row and persisted by "Save changes".
+  async function onPickImageDraft(index: number, file: File | undefined) {
+    if (!file) return;
+    setUploadingIndex(index);
+    setError(null);
+    try {
+      const imageId = await uploadImage(file);
+      update(index, "explanation_image_id", imageId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Image upload failed");
+    } finally {
+      setUploadingIndex(null);
+    }
+  }
+
+  // Live/ended mode: attach directly to the saved question.
+  async function onPickImageLive(index: number, file: File | undefined) {
+    const questionId = rows[index]?.id;
+    if (!file || !questionId) return;
+    setUploadingIndex(index);
+    setError(null);
+    try {
+      const imageId = await uploadImage(file);
+      const res = await fetch(`/api/admin/questions/${questionId}/explanation`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageId }),
+      });
+      if (!res.ok) throw new Error("Could not attach the image");
+      setRows((prev) =>
+        prev.map((r, i) => (i === index ? { ...r, explanation_image_id: imageId } : r))
+      );
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Image upload failed");
+    } finally {
+      setUploadingIndex(null);
+    }
+  }
+
+  async function onRemoveImageLive(index: number) {
+    const questionId = rows[index]?.id;
+    if (!questionId) return;
+    await fetch(`/api/admin/questions/${questionId}/explanation`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageId: null }),
+    });
+    setRows((prev) =>
+      prev.map((r, i) => (i === index ? { ...r, explanation_image_id: null } : r))
+    );
+    router.refresh();
   }
 
   async function save() {
@@ -82,6 +173,53 @@ export default function QuestionEditor({
     router.refresh();
   }
 
+  function explanationControl(index: number, mode: "draft" | "live") {
+    const row = rows[index];
+    const busy = uploadingIndex === index;
+    const onPick = mode === "draft" ? onPickImageDraft : onPickImageLive;
+    return (
+      <div className="mt-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="text-xs font-semibold text-muted uppercase tracking-wider">
+            Explanation image
+          </label>
+          <label className={`btn btn-sm btn-outline cursor-pointer ${busy ? "opacity-50 pointer-events-none" : ""}`}>
+            {busy ? "Uploading…" : row.explanation_image_id ? "🖼 Change" : "🖼 Add image"}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                onPick(index, e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          {row.explanation_image_id && (
+            <button
+              onClick={() =>
+                mode === "draft"
+                  ? update(index, "explanation_image_id", null)
+                  : onRemoveImageLive(index)
+              }
+              className="text-xs font-semibold text-muted hover:text-danger transition-colors"
+            >
+              ✕ Remove image
+            </button>
+          )}
+        </div>
+        {row.explanation_image_id && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={`/api/explanations/${row.explanation_image_id}`}
+            alt={`Explanation for question ${index + 1}`}
+            className="mt-2.5 rounded-xl border border-line max-h-56 w-auto"
+          />
+        )}
+      </div>
+    );
+  }
+
   if (rows.length === 0 && !editable) return null;
 
   // ---------- read-only view (exam is live or ended) ----------
@@ -92,13 +230,19 @@ export default function QuestionEditor({
           <h2 className="font-display font-bold text-ink">
             Questions
             <span className="text-muted font-sans font-normal text-sm ml-2">
-              {rows.length} total · read-only after the exam starts
+              {rows.length} total · text is read-only after the exam starts, but you can still
+              add explanation images
             </span>
           </h2>
         </div>
-        <div className="divide-y divide-line max-h-[32rem] overflow-y-auto">
+        {error && (
+          <p className="mx-5 mt-4 flex items-start gap-2 text-sm text-danger bg-red-50 border border-red-100 rounded-xl p-3.5">
+            <span aria-hidden>⚠</span> {error}
+          </p>
+        )}
+        <div className="divide-y divide-line max-h-[40rem] overflow-y-auto">
           {rows.map((q, i) => (
-            <div key={i} className="p-5">
+            <div key={q.id ?? i} className="p-5">
               <p className="font-semibold text-ink text-sm leading-relaxed whitespace-pre-wrap mb-2.5">
                 <span className="text-muted mr-1.5">{i + 1}.</span>
                 {q.question}
@@ -130,6 +274,7 @@ export default function QuestionEditor({
                   );
                 })}
               </div>
+              {explanationControl(i, "live")}
             </div>
           ))}
         </div>
@@ -255,6 +400,7 @@ export default function QuestionEditor({
                   />
                 </div>
               </div>
+              {explanationControl(i, "draft")}
             </div>
           ))}
         </div>

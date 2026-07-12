@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ObjectId } from "mongodb";
+import { GridFSBucket, ObjectId } from "mongodb";
 import { requireAdmin } from "@/lib/adminGuard";
 import { getDb } from "@/lib/db";
 
@@ -51,6 +51,10 @@ export async function POST(
       option_d: String(q.option_d).trim(),
       correct,
       section: q.section ? String(q.section).trim().slice(0, 40) : null,
+      explanation_image_id:
+        typeof q.explanation_image_id === "string" && ObjectId.isValid(q.explanation_image_id)
+          ? new ObjectId(q.explanation_image_id)
+          : null,
     });
   }
 
@@ -66,5 +70,22 @@ export async function POST(
 
   await db.collection("questions").deleteMany({ exam_id: examOid });
   await db.collection("questions").insertMany(rows);
+
+  // Garbage-collect explanation images this exam no longer references.
+  const referenced = new Set(
+    rows.map((r) => r.explanation_image_id?.toString()).filter(Boolean)
+  );
+  const stored = await db
+    .collection("explanations.files")
+    .find({ "metadata.exam_id": examOid })
+    .project({ _id: 1 })
+    .toArray();
+  const bucket = new GridFSBucket(db, { bucketName: "explanations" });
+  for (const f of stored) {
+    if (!referenced.has(f._id.toString())) {
+      await bucket.delete(f._id).catch(() => {});
+    }
+  }
+
   return NextResponse.json({ ok: true, count: rows.length });
 }

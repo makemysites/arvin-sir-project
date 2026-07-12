@@ -20,6 +20,7 @@ async function connect(): Promise<Db> {
     db.collection("otps").createIndex({ expires_at: 1 }, { expireAfterSeconds: 0 }),
     db.collection("questions").createIndex({ exam_id: 1, position: 1 }),
     db.collection("attempts").createIndex({ exam_id: 1, student_id: 1 }, { unique: true }),
+    db.collection("reviews").createIndex({ exam_id: 1, student_id: 1 }, { unique: true }),
   ]);
   return db;
 }

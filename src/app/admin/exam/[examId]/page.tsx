@@ -31,7 +31,7 @@ export default async function AdminExamPage({
   const examOid = new ObjectId(examId);
 
   const db = await getDb();
-  const [exam, questionDocs, attempts] = await Promise.all([
+  const [exam, questionDocs, attempts, reviews] = await Promise.all([
     db.collection("exams").findOne({ _id: examOid }),
     db
       .collection("questions")
@@ -43,6 +43,11 @@ export default async function AdminExamPage({
       .find({ exam_id: examOid })
       .sort({ score: -1 })
       .toArray(),
+    db
+      .collection("reviews")
+      .find({ exam_id: examOid })
+      .sort({ updated_at: -1 })
+      .toArray(),
   ]);
 
   if (!exam) notFound();
@@ -50,6 +55,7 @@ export default async function AdminExamPage({
   const questionCount = questionDocs.length;
   // Plain objects for the client-side editor.
   const editorRows = questionDocs.map((q) => ({
+    id: q._id.toString(),
     question: q.question as string,
     option_a: q.option_a as string,
     option_b: q.option_b as string,
@@ -57,13 +63,22 @@ export default async function AdminExamPage({
     option_d: q.option_d as string,
     correct: q.correct as string,
     section: (q.section as string | null) ?? "",
+    explanation_image_id: q.explanation_image_id ? q.explanation_image_id.toString() : null,
   }));
 
-  const studentIds = attempts.map((a) => a.student_id);
+  const studentIds = [
+    ...attempts.map((a) => a.student_id),
+    ...reviews.map((r) => r.student_id),
+  ];
   const students = studentIds.length
     ? await db.collection("users").find({ _id: { $in: studentIds } }).toArray()
     : [];
   const studentById = new Map(students.map((s) => [s._id.toString(), s]));
+
+  const avgRating =
+    reviews.length > 0
+      ? (reviews.reduce((acc, r) => acc + (r.rating ?? 0), 0) / reviews.length).toFixed(1)
+      : null;
 
   const submitted = attempts.filter((r) => r.status === "submitted");
   const inProgress = attempts.filter((r) => r.status === "in_progress");
@@ -261,6 +276,63 @@ export default async function AdminExamPage({
                 })}
               </tbody>
             </table>
+          )}
+        </section>
+
+        <section className="card overflow-hidden fade-up">
+          <div className="p-5 flex items-center justify-between flex-wrap gap-3 border-b border-line">
+            <h2 className="font-display font-bold text-ink">
+              Student feedback
+              <span className="text-muted font-sans font-normal text-sm ml-2">
+                {reviews.length} review{reviews.length === 1 ? "" : "s"}
+              </span>
+            </h2>
+            {avgRating && (
+              <span className="pill bg-amber-50 text-amber-700">★ {avgRating} average</span>
+            )}
+          </div>
+          {reviews.length === 0 ? (
+            <p className="p-8 text-center text-sm text-muted">
+              No reviews yet — students can leave feedback from their results page after
+              submitting.
+            </p>
+          ) : (
+            <div className="divide-y divide-line">
+              {reviews.map((r) => {
+                const s = studentById.get(r.student_id.toString());
+                return (
+                  <div key={r._id.toString()} className="p-5">
+                    <div className="flex items-center justify-between flex-wrap gap-2 mb-1.5">
+                      <div className="flex items-center gap-2.5">
+                        <span className="h-7 w-7 shrink-0 rounded-full bg-slate-100 text-muted text-xs font-bold flex items-center justify-center">
+                          {(s?.full_name ?? s?.email ?? "?").charAt(0).toUpperCase()}
+                        </span>
+                        <span className="font-semibold text-ink text-sm">
+                          {s?.full_name ?? s?.email ?? "Student"}
+                        </span>
+                        <span className="text-amber-500 text-sm tracking-tight">
+                          {"★".repeat(r.rating ?? 0)}
+                          <span className="text-slate-200">
+                            {"★".repeat(Math.max(0, 5 - (r.rating ?? 0)))}
+                          </span>
+                        </span>
+                      </div>
+                      <span className="text-xs text-muted">
+                        {new Date(r.updated_at ?? r.created_at).toLocaleDateString("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                        })}
+                      </span>
+                    </div>
+                    {r.comment && (
+                      <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap pl-9">
+                        {r.comment}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </section>
       </main>
