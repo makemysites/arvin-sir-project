@@ -24,9 +24,16 @@ export default async function LeaderboardPage({
   const exam = await db.collection("exams").findOne({ _id: examOid });
   if (!exam) notFound();
 
-  // Students only see the leaderboard after the exam has ended.
+  // Students can always see ended-exam leaderboards. During a live exam they
+  // can watch the standings too — but only after submitting their own attempt.
   if (!admin && exam.status !== "ended") {
-    redirect("/dashboard");
+    if (exam.status !== "live") redirect("/dashboard");
+    const myAttempt = await db.collection("attempts").findOne({
+      exam_id: examOid,
+      student_id: new ObjectId(user.id),
+      status: "submitted",
+    });
+    if (!myAttempt) redirect("/dashboard");
   }
 
   const [attempts, viewer] = await Promise.all([
@@ -86,6 +93,15 @@ export default async function LeaderboardPage({
           <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
             Leaderboard
           </h1>
+          {exam.status === "live" && (
+            <p className="mt-3 inline-flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-4 py-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              Live standings — refresh to see new submissions
+            </p>
+          )}
         </div>
 
         {ranked.length === 0 ? (

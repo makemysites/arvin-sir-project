@@ -4,6 +4,7 @@ import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { OptionKey, StudentQuestion } from "@/lib/types";
 import { MAX_VIOLATIONS } from "@/lib/types";
+import ReportIssueButton from "@/components/ReportIssueButton";
 
 type Phase = "rules" | "loading" | "running" | "submitting" | "done";
 
@@ -58,6 +59,7 @@ export default function ExamPage({
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [violations, setViolations] = useState(0);
   const [warning, setWarning] = useState<string | null>(null);
+  const [wakeLockActive, setWakeLockActive] = useState(false);
   const [result, setResult] = useState<{ score: number; total: number } | null>(null);
 
   // Refs so event handlers always see current values without re-binding.
@@ -178,6 +180,48 @@ export default function ExamPage({
     return () => clearInterval(id);
   }, [phase, data, submit]);
 
+  // Wake Lock — keeps the screen on during the exam.
+  useEffect(() => {
+    if (phase !== "running") return;
+    let wakeLock: WakeLockSentinel | null = null;
+    let released = false;
+
+    async function acquireLock() {
+      if (released) return;
+      try {
+        if ("wakeLock" in navigator) {
+          wakeLock = await navigator.wakeLock.request("screen");
+          setWakeLockActive(true);
+          wakeLock.addEventListener("release", () => {
+            setWakeLockActive(false);
+          });
+        }
+      } catch {
+        // Wake Lock request can fail (e.g. low battery, browser policy)
+        setWakeLockActive(false);
+      }
+    }
+
+    // Re-acquire Wake Lock when the page becomes visible again.
+    // Browsers automatically release the lock when the tab is hidden.
+    function onVisibilityForWakeLock() {
+      if (document.visibilityState === "visible") acquireLock();
+    }
+
+    acquireLock();
+    document.addEventListener("visibilitychange", onVisibilityForWakeLock);
+
+    return () => {
+      released = true;
+      document.removeEventListener("visibilitychange", onVisibilityForWakeLock);
+      if (wakeLock) {
+        wakeLock.release().catch(() => {});
+        wakeLock = null;
+      }
+      setWakeLockActive(false);
+    };
+  }, [phase]);
+
   // Anti-cheat listeners.
   useEffect(() => {
     if (phase !== "running") return;
@@ -297,9 +341,17 @@ export default function ExamPage({
             You can review each question with the correct answers once your teacher ends the
             exam.
           </p>
-          <button onClick={() => router.push("/dashboard")} className="btn btn-lg btn-primary px-8">
-            Back to dashboard
-          </button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button onClick={() => router.push("/dashboard")} className="btn btn-lg btn-primary px-8">
+              Back to dashboard
+            </button>
+            <button
+              onClick={() => router.push(`/leaderboard/${examId}`)}
+              className="btn btn-lg btn-outline px-8"
+            >
+              🏆 View leaderboard
+            </button>
+          </div>
         </div>
       </main>
     );
@@ -364,6 +416,24 @@ export default function ExamPage({
               )}
             </p>
           </div>
+          <div className="flex items-center gap-3">
+            <span
+              className={`wake-lock-badge ${
+                wakeLockActive
+                  ? "wake-lock-badge--active"
+                  : "wake-lock-badge--inactive"
+              }`}
+              title={
+                wakeLockActive
+                  ? "Screen wake lock active — your screen won't sleep"
+                  : "Wake lock unavailable — adjust your device sleep settings"
+              }
+            >
+              {wakeLockActive ? "🔒" : "⚠️"}
+              <span className="hidden sm:inline ml-1 text-[11px]">
+                {wakeLockActive ? "Screen on" : "No lock"}
+              </span>
+            </span>
           <div
             className={`shrink-0 font-mono tabular-nums text-xl font-bold px-4 py-2 rounded-xl border ${
               secondsLeft <= 60
@@ -372,6 +442,7 @@ export default function ExamPage({
             }`}
           >
             {fmt(secondsLeft)}
+          </div>
           </div>
         </div>
         <div className="mt-3 h-1.5 rounded-full bg-slate-100 overflow-hidden">
@@ -513,6 +584,7 @@ export default function ExamPage({
           >
             Submit exam
           </button>
+          <ReportIssueButton examId={examId} attemptId={data.attemptId} />
         </div>
       </div>
     </main>

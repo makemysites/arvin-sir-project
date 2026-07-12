@@ -133,12 +133,20 @@ export default async function Dashboard({
                       <span aria-hidden>⏱</span> {exam.duration_minutes} minutes
                     </p>
                     {attempt?.status === "submitted" ? (
-                      <div className="mt-4 rounded-xl bg-slate-50 border border-line px-4 py-3 text-sm">
-                        <span className="text-muted">Submitted — score </span>
-                        <span className="font-bold text-ink">
-                          {attempt.score}/{attempt.total}
-                        </span>
-                      </div>
+                      <>
+                        <div className="mt-4 rounded-xl bg-slate-50 border border-line px-4 py-3 text-sm">
+                          <span className="text-muted">Submitted — score </span>
+                          <span className="font-bold text-ink">
+                            {attempt.score}/{attempt.total}
+                          </span>
+                        </div>
+                        <Link
+                          href={`/leaderboard/${examId}`}
+                          className="btn btn-sm btn-outline w-full mt-2.5"
+                        >
+                          🏆 View live leaderboard
+                        </Link>
+                      </>
                     ) : (
                       <Link href={`/exam/${examId}`} className="btn btn-primary w-full mt-5">
                         {attempt ? "Resume exam →" : "Start exam →"}

@@ -21,6 +21,7 @@ async function connect(): Promise<Db> {
     db.collection("questions").createIndex({ exam_id: 1, position: 1 }),
     db.collection("attempts").createIndex({ exam_id: 1, student_id: 1 }, { unique: true }),
     db.collection("reviews").createIndex({ exam_id: 1, student_id: 1 }, { unique: true }),
+    db.collection("issues").createIndex({ exam_id: 1, created_at: -1 }),
   ]);
   return db;
 }

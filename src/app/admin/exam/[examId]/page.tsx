@@ -31,7 +31,7 @@ export default async function AdminExamPage({
   const examOid = new ObjectId(examId);
 
   const db = await getDb();
-  const [exam, questionDocs, attempts, reviews] = await Promise.all([
+  const [exam, questionDocs, attempts, reviews, issues] = await Promise.all([
     db.collection("exams").findOne({ _id: examOid }),
     db
       .collection("questions")
@@ -47,6 +47,11 @@ export default async function AdminExamPage({
       .collection("reviews")
       .find({ exam_id: examOid })
       .sort({ updated_at: -1 })
+      .toArray(),
+    db
+      .collection("issues")
+      .find({ exam_id: examOid })
+      .sort({ created_at: -1 })
       .toArray(),
   ]);
 
@@ -69,6 +74,7 @@ export default async function AdminExamPage({
   const studentIds = [
     ...attempts.map((a) => a.student_id),
     ...reviews.map((r) => r.student_id),
+    ...issues.map((i) => i.student_id),
   ];
   const students = studentIds.length
     ? await db.collection("users").find({ _id: { $in: studentIds } }).toArray()
@@ -327,6 +333,75 @@ export default async function AdminExamPage({
                     {r.comment && (
                       <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap pl-9">
                         {r.comment}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <section className="card overflow-hidden fade-up">
+          <div className="p-5 flex items-center justify-between flex-wrap gap-3 border-b border-line">
+            <h2 className="font-display font-bold text-ink">
+              Reported issues
+              <span className="text-muted font-sans font-normal text-sm ml-2">
+                {issues.length} issue{issues.length === 1 ? "" : "s"}
+              </span>
+            </h2>
+            {issues.length > 0 && (
+              <span className="pill bg-red-50 text-danger">
+                {issues.filter((i) => i.status === "open").length} open
+              </span>
+            )}
+          </div>
+          {issues.length === 0 ? (
+            <p className="p-8 text-center text-sm text-muted">
+              No issues reported — students can report problems from the exam screen.
+            </p>
+          ) : (
+            <div className="divide-y divide-line">
+              {issues.map((issue) => {
+                const s = studentById.get(issue.student_id.toString());
+                const initial = (s?.full_name ?? s?.email ?? "?").charAt(0).toUpperCase();
+                return (
+                  <div key={issue._id.toString()} className="p-5">
+                    <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className="h-7 w-7 shrink-0 rounded-full bg-slate-100 text-muted text-xs font-bold flex items-center justify-center">
+                          {initial}
+                        </span>
+                        <span className="font-semibold text-ink text-sm">
+                          {s?.full_name ?? s?.email ?? "Student"}
+                        </span>
+                        <span className="pill bg-red-50 text-danger">
+                          {issue.category}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`pill ${
+                            issue.status === "open"
+                              ? "bg-amber-50 text-amber-700"
+                              : "bg-emerald-50 text-emerald-700"
+                          }`}
+                        >
+                          {issue.status}
+                        </span>
+                        <span className="text-xs text-muted">
+                          {new Date(issue.created_at).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    {issue.description && (
+                      <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap pl-9">
+                        {issue.description}
                       </p>
                     )}
                   </div>
