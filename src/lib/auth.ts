@@ -3,7 +3,10 @@ import { cookies } from "next/headers";
 import { getDb } from "@/lib/db";
 
 const COOKIE_NAME = "exam_session";
-const SESSION_DAYS = 7;
+// How long students stay signed in. Longer sessions = far fewer OTP emails
+// (every re-login costs one email from the daily quota). Override on Vercel
+// with the SESSION_DAYS env var — 30 is recommended.
+const SESSION_DAYS = Math.max(1, Number(process.env.SESSION_DAYS) || 30);
 
 export interface SessionUser {
   id: string; // users._id as hex string
